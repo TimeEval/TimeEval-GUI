@@ -68,10 +68,8 @@ def parameter_area(a, t, anomaly_type: str) -> Dict:
     return param_conf
 
 
-def main():
+def page():
     logo = "images/logo_transparent.png"
-    st.set_page_config(page_title="GutenTAG - A good Timeseries Anomaly Generator", page_icon=logo)
-
     st.image(logo)
 
     timeseries_config = TimeSeriesConfig()
@@ -95,7 +93,3 @@ def main():
         timeseries = timeseries_config.generate_timeseries()
         timeseries.generate()
         st.pyplot(timeseries.build_figure_base_oscillation())
-
-
-if __name__ == '__main__':
-    main()
