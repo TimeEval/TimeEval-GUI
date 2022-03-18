@@ -1,0 +1,3 @@
+streamlit==1.7.0
+-e git+https://github.com/HPI-Information-Systems/TimeEval.git#egg=timeeval
+-e git+https://github.com/HPI-Information-Systems/GutenTAG.git#egg=gutenTAG
