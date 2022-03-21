@@ -41,7 +41,7 @@ def map_types(t: str) -> Type:
 def get_anomaly_params(anomaly: str) -> List[Tuple[str, Type]]:
     params = []
 
-    with open("./generation-config-schema/anomaly-kind.guten-tag-generation-config.schema.yaml", "r") as f:
+    with open("GutenTAG/generation-config-schema/anomaly-kind.guten-tag-generation-config.schema.yaml", "r") as f:
         param_config = yaml.load(f, Loader=yaml.FullLoader)
 
     for param_name, param in param_config["definitions"].get(f"{anomaly}-params", {}).get("properties", {}).items():

@@ -69,21 +69,20 @@ def parameter_area(a, t, anomaly_type: str) -> Dict:
 
 
 def page():
-    logo = "images/logo_transparent.png"
-    st.image(logo)
+    st.title("GutenTAG")
 
     timeseries_config = TimeSeriesConfig()
 
-    st.write("# General Settings")
+    st.write("## General Settings")
     timeseries_config = general_area(timeseries_config)
 
-    st.write("# Channels")
+    st.write("## Channels")
     n_channels = st.number_input("Number of Channels", min_value=1)
     for c in range(n_channels):
         with st.expander(f"Channel {c}"):
             timeseries_config = channel_area(c, timeseries_config)
 
-    st.write("# Anomalies")
+    st.write("## Anomalies")
     n_anomalies = st.number_input("Number of Anomalies", min_value=0)
     for a in range(n_anomalies):
         with st.expander(f"Anomaly {a}"):
@@ -93,3 +92,5 @@ def page():
         timeseries = timeseries_config.generate_timeseries()
         timeseries.generate()
         st.pyplot(timeseries.build_figure_base_oscillation())
+
+    st.button("Export")
