@@ -153,9 +153,13 @@ class Results(Page):
 
     def _plot_experiment(self, res: pd.DataFrame, dmgr: DatasetManager, results_path: Path):
         st.header("Plot Single Experiment")
-        collection = st.selectbox("Collection", options=res["collection"].unique())
-        dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique())
-        algorithm_name = st.selectbox("Algorithm", res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique())
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            collection = st.selectbox("Collection", options=res["collection"].unique())
+        with col2:
+            dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique())
+        with col3:
+            algorithm_name = st.selectbox("Algorithm", res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique())
         if st.button("Plot"):
             fig = plot_scores(algorithm_name, dataset, res, dmgr, results_path)
             st.pyplot(fig)

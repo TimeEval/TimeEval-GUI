@@ -74,7 +74,7 @@ class GutenTAG(Page):
         return "GutenTAG"
 
     def render(self):
-        st.title("GutenTAG")
+        st.image("images/gutentag.png")
 
         timeseries_config = TimeSeriesConfig()
 

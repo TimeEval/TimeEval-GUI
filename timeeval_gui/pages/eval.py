@@ -10,6 +10,7 @@ class Eval(Page):
         return "Eval"
 
     def render(self):
+        st.image("images/timeeval.png")
         st.title("Eval")
 
         st.write("## Algorithms")
@@ -29,20 +30,20 @@ class Eval(Page):
 
         st.write("## Datasets")
 
-        datasets = st.multiselect("Datasets", options=["Traffic", "ECG", "VLDB-Demo-TS"])
+        datasets = st.multiselect("Datasets", options=["Traffic", "ECG", "ecg-10000-1"])
 
         st.write("## General Settings")
 
-        st.write("### Remote Configuration")
-        st.text_input("Scheduler Host")
-        st.text_area("Worker Hosts")
+        with st.expander("Remote Configuration"):
+            st.text_input("Scheduler Host")
+            st.text_area("Worker Hosts")
 
-        st.write("### Resource Constraints")
-        st.number_input("Tasks per Host", min_value=1)
-        st.number_input("CPU Limit")
-        st.time_input("Train Timeout")
-        st.time_input("Execute Timeout")
-        st.number_input("Memory (GB)")
+        with st.expander("Resource Constraints"):
+            st.number_input("Tasks per Host", min_value=1)
+            st.number_input("CPU Limit")
+            st.time_input("Train Timeout")
+            st.time_input("Execute Timeout")
+            st.number_input("Memory (GB)")
 
         if st.button("Start Experiment"):
             st.write("## Results")
