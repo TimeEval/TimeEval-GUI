@@ -4,6 +4,7 @@ import streamlit as st
 
 from timeeval_gui.timeseries_config import TimeSeriesConfig
 from timeeval_gui.utils import get_base_oscillations, get_anomaly_types, get_anomaly_params
+from .page import Page
 
 
 def general_area(ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
@@ -68,29 +69,33 @@ def parameter_area(a, t, anomaly_type: str) -> Dict:
     return param_conf
 
 
-def page():
-    st.title("GutenTAG")
+class GutenTAG(Page):
+    def _get_name(self) -> str:
+        return "GutenTAG"
 
-    timeseries_config = TimeSeriesConfig()
+    def render(self):
+        st.title("GutenTAG")
 
-    st.write("## General Settings")
-    timeseries_config = general_area(timeseries_config)
+        timeseries_config = TimeSeriesConfig()
 
-    st.write("## Channels")
-    n_channels = st.number_input("Number of Channels", min_value=1)
-    for c in range(n_channels):
-        with st.expander(f"Channel {c}"):
-            timeseries_config = channel_area(c, timeseries_config)
+        st.write("## General Settings")
+        timeseries_config = general_area(timeseries_config)
 
-    st.write("## Anomalies")
-    n_anomalies = st.number_input("Number of Anomalies", min_value=0)
-    for a in range(n_anomalies):
-        with st.expander(f"Anomaly {a}"):
-            timeseries_config = anomaly_area(a, timeseries_config)
+        st.write("## Channels")
+        n_channels = st.number_input("Number of Channels", min_value=1)
+        for c in range(n_channels):
+            with st.expander(f"Channel {c}"):
+                timeseries_config = channel_area(c, timeseries_config)
 
-    if st.button("Build Timeseries"):
-        timeseries = timeseries_config.generate_timeseries()
-        timeseries.generate()
-        st.pyplot(timeseries.build_figure_base_oscillation())
+        st.write("## Anomalies")
+        n_anomalies = st.number_input("Number of Anomalies", min_value=0)
+        for a in range(n_anomalies):
+            with st.expander(f"Anomaly {a}"):
+                timeseries_config = anomaly_area(a, timeseries_config)
 
-    st.button("Export")
+        if st.button("Build Timeseries"):
+            timeseries = timeseries_config.generate_timeseries()
+            timeseries.generate()
+            st.pyplot(timeseries.build_figure_base_oscillation())
+
+        st.button("Export")

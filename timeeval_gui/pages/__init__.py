@@ -1,19 +1,34 @@
-from enum import Enum
 import streamlit as st
 
-from .gutentag import page as gutentag_page
-from .eval import page as eval_page
+from .gutentag import GutenTAG
+from .eval import Eval
+from .page import Page
+from .results import Results
 
 
-def Pages():
-    if st.sidebar.button("GutenTAG"):
-        st.session_state['page'] = "gutentag"
-    if st.sidebar.button("Eval"):
-        st.session_state['page'] = "eval"
+class Pages:
+    def __init__(self, *pages: Page):
+        assert len(pages) > 0, "You have to add at least one Page"
+        self.pages = pages
 
-    if "page" in st.session_state and st.session_state.page == "gutentag":
-        gutentag_page()
-    elif "page" in st.session_state and st.session_state.page == "eval":
-        eval_page()
-    else:
-        gutentag_page()
+    def _render_sidebar(self):
+        for page in self.pages:
+            name = page.name
+            if st.sidebar.button(name):
+                st.session_state['page'] = name
+
+    def _render_page(self):
+        first_page = self.pages[0].name
+        active_page = st.session_state.get("page", first_page)
+        for page in self.pages:
+            if active_page == page.name:
+                page.render()
+                break
+
+    def render(self):
+        self._render_sidebar()
+        self._render_page()
+
+    @staticmethod
+    def default() -> 'Pages':
+        return Pages(GutenTAG(), Eval(), Results())
