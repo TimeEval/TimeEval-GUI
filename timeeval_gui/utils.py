@@ -1,5 +1,6 @@
 from typing import Dict, Tuple, List, Type
-import yaml
+
+from timeeval_gui.files import Files
 
 
 def get_base_oscillations() -> Dict[str, str]:
@@ -40,9 +41,7 @@ def map_types(t: str) -> Type:
 
 def get_anomaly_params(anomaly: str) -> List[Tuple[str, Type]]:
     params = []
-
-    with open("GutenTAG/generation-config-schema/anomaly-kind.guten-tag-generation-config.schema.yaml", "r") as f:
-        param_config = yaml.load(f, Loader=yaml.FullLoader)
+    param_config = Files.instance().anomaly_kind_configuration_schema()
 
     for param_name, param in param_config["definitions"].get(f"{anomaly}-params", {}).get("properties", {}).items():
         params.append((param_name, map_types(param.get("type"))))
