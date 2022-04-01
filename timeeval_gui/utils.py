@@ -41,7 +41,7 @@ def map_types(t: str) -> Type:
 
 def get_anomaly_params(anomaly: str) -> List[Tuple[str, Type]]:
     params = []
-    param_config = Files.instance().anomaly_kind_configuration_schema()
+    param_config = Files().anomaly_kind_configuration_schema()
 
     for param_name, param in param_config["definitions"].get(f"{anomaly}-params", {}).get("properties", {}).items():
         params.append((param_name, map_types(param.get("type"))))

@@ -10,20 +10,21 @@ from timeeval_gui.config import GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL, TIMEEVA
 class Files:
     _instance: Optional['Files'] = None
 
-    @staticmethod
-    def instance() -> 'Files':
-        if Files._instance is None:
-            Files._instance = Files()
-        return Files._instance
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(Files, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
 
     def __init__(self):
         if TIMEEVAL_FILES_PATH.is_absolute():
             self._files_path = TIMEEVAL_FILES_PATH
         else:
             self._files_path = (Path.cwd() / TIMEEVAL_FILES_PATH).absolute()
-        self._anomaly_kind_schema_path = TIMEEVAL_FILES_PATH / "cache" / "anomaly-kind.guten-tag-generation-config.schema.yaml"
         self._files_path.mkdir(parents=True, exist_ok=True)
-        (self._files_path / "cache").mkdir(exist_ok=True)
+        self._anomaly_kind_schema_path = self._files_path / "cache" / "anomaly-kind.guten-tag-generation-config.schema.yaml"
+        self._anomaly_kind_schema_path.parent.mkdir(exist_ok=True)
+        self._ts_path = self._files_path / "timeseries"
+        self._ts_path.mkdir(exist_ok=True)
 
     def anomaly_kind_configuration_schema(self) -> Dict[Hashable, Any]:
         # load parameter configuration only once
