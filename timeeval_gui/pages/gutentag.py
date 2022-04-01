@@ -1,9 +1,11 @@
+import warnings
 from typing import Tuple, Dict
 
 import streamlit as st
 
 from timeeval_gui.timeseries_config import TimeSeriesConfig
-from timeeval_gui.utils import get_base_oscillations, get_anomaly_types, get_anomaly_params
+from timeeval_gui.utils import get_base_oscillations, get_anomaly_types, get_anomaly_params, \
+    get_base_oscillation_parameters
 from .page import Page
 from ..files import Files
 
@@ -11,28 +13,41 @@ from ..files import Files
 def general_area(ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
     ts_config.set_name(st.text_input("Name"))
     ts_config.set_length(st.number_input("Length", min_value=10, value=1000))
+
+    if st.checkbox("Generate training time series for supervised methods"):
+        ts_config.set_supervised()
+    if st.checkbox("Generate training time series for semi-supervised methods"):
+        ts_config.set_semi_supervised()
     return ts_config
 
 
 def select_base_oscillation(key="base-oscillation") -> Tuple[str, str]:
     bos = get_base_oscillations()
-
     value = st.selectbox("Base-Oscillation", bos.items(), format_func=lambda x: x[1], key=key)
     return value
 
 
 def select_anomaly_type(key="anomaly-type") -> Tuple[str, str]:
     bos = get_anomaly_types()
-
     value = st.selectbox("Anomaly Type", bos.items(), format_func=lambda x: x[1], key=key)
     return value
 
 
 def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
     base_oscillation = select_base_oscillation(f"base-oscillation-{c}")
-    frequency = st.number_input("Frequency (#repetitions/100)", key=f"frequency-{c}")
-    variance = st.number_input("Variance", key=f"variance-{c}")
-    ts_config.add_base_oscillation(base_oscillation[0], frequency=frequency, variance=variance)
+    parameters = get_base_oscillation_parameters(base_oscillation[0])
+    param_config = {}
+    for p in parameters:
+        if p.tpe in ["number", "integer"]:
+            param_config[p.key] = st.number_input(p.name, key=f"{p.key}-{c}", help=p.help)
+        else:
+            warn_msg = f"Input type ({p.tpe}) for parameter {p.name} of BO {base_oscillation[1]} not supported yet!"
+            warnings.warn(warn_msg)
+            st.warning(warn_msg)
+    # frequency = st.number_input("Frequency (#repetitions/100)", key=f"frequency-{c}")
+    # variance = st.number_input("Variance", key=f"variance-{c}", help="Noise factor dependent on amplitude")
+    # offset = st.number_input("Offset", key=f"offset-{c}", help="Gets added to the generated time series")
+    ts_config.add_base_oscillation(base_oscillation[0], **param_config)
 
     return ts_config
 
@@ -96,12 +111,9 @@ class GutenTAG(Page):
 
         st.write("---")
 
-        is_supervised = st.checkbox("Generate training time series for supervised methods")
-        is_semi_supervised = st.checkbox("Generate training time series for semi-supervised methods")
-
         timeseries = None
         if st.button("Build Timeseries"):
-            timeseries = timeseries_config.generate_timeseries(is_supervised, is_semi_supervised)
+            timeseries = timeseries_config.generate_timeseries()
             timeseries.generate()
             timeseries.plot()
             st.pyplot()
@@ -109,6 +121,6 @@ class GutenTAG(Page):
 
         if st.button("Save"):
             if timeseries is None:
-                timeseries = timeseries_config.generate_timeseries(is_supervised, is_semi_supervised)
+                timeseries = timeseries_config.generate_timeseries()
                 timeseries.generate()
                 Files().store_ts(timeseries)
