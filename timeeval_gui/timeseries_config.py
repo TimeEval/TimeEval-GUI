@@ -34,8 +34,10 @@ class TimeSeriesConfig:
         anomalies = parser._build_anomalies(self.config)
         return anomalies
 
-    def generate_timeseries(self) -> TimeSeries:
-        return TimeSeries(self.generate_base_oscillations(), self.generate_anomalies(), self.name)
+    def generate_timeseries(self, supervised: bool = False, semi_supervised: bool = False) -> TimeSeries:
+        return TimeSeries(self.generate_base_oscillations(), self.generate_anomalies(), self.name,
+                          supervised=supervised,
+                          semi_supervised=semi_supervised)
 
     def __getattr__(self, item):
         return self.config[item]

@@ -5,11 +5,12 @@ import streamlit as st
 from timeeval_gui.timeseries_config import TimeSeriesConfig
 from timeeval_gui.utils import get_base_oscillations, get_anomaly_types, get_anomaly_params
 from .page import Page
+from ..files import Files
 
 
 def general_area(ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
     ts_config.set_name(st.text_input("Name"))
-    ts_config.set_length(st.number_input("Length", min_value=10))
+    ts_config.set_length(st.number_input("Length", min_value=10, value=1000))
     return ts_config
 
 
@@ -37,7 +38,7 @@ def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
 
 
 def anomaly_area(a, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
-    position = st.selectbox("Position", key=f"anomaly-position-{a}", options=["beginning", "middle", "end"])
+    position = st.selectbox("Position", key=f"anomaly-position-{a}", options=["beginning", "middle", "end"], index=1)
     length = int(st.number_input("Length", key=f"anomaly-length-{a}", min_value=1))
     channel = st.selectbox("Channel", key=f"anomaly-channel-{a}", options=list(range(len(ts_config.config["base-oscillations"]))))
 
@@ -93,9 +94,21 @@ class GutenTAG(Page):
             with st.expander(f"Anomaly {a}"):
                 timeseries_config = anomaly_area(a, timeseries_config)
 
-        if st.button("Build Timeseries"):
-            timeseries = timeseries_config.generate_timeseries()
-            timeseries.generate()
-            st.pyplot(timeseries.build_figure_base_oscillation())
+        st.write("---")
 
-        st.button("Export")
+        is_supervised = st.checkbox("Generate training time series for supervised methods")
+        is_semi_supervised = st.checkbox("Generate training time series for semi-supervised methods")
+
+        timeseries = None
+        if st.button("Build Timeseries"):
+            timeseries = timeseries_config.generate_timeseries(is_supervised, is_semi_supervised)
+            timeseries.generate()
+            timeseries.plot()
+            st.pyplot()
+            # st.pyplot(timeseries.build_figure_base_oscillation())
+
+        if st.button("Save"):
+            if timeseries is None:
+                timeseries = timeseries_config.generate_timeseries(is_supervised, is_semi_supervised)
+                timeseries.generate()
+                Files().store_ts(timeseries)
