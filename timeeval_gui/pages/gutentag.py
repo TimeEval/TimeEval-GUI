@@ -2,6 +2,7 @@ import warnings
 from typing import Tuple, Dict
 
 import streamlit as st
+from gutenTAG import GutenTAG
 
 from timeeval_gui.timeseries_config import TimeSeriesConfig
 from timeeval_gui.utils import get_base_oscillations, get_anomaly_types, get_anomaly_params, \
@@ -52,7 +53,8 @@ def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
 def anomaly_area(a, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
     position = st.selectbox("Position", key=f"anomaly-position-{a}", options=["beginning", "middle", "end"], index=1)
     length = int(st.number_input("Length", key=f"anomaly-length-{a}", min_value=1))
-    channel = st.selectbox("Channel", key=f"anomaly-channel-{a}", options=list(range(len(ts_config.config["base-oscillations"]))))
+    channel = st.selectbox("Channel", key=f"anomaly-channel-{a}",
+                           options=list(range(len(ts_config.config["base-oscillations"]))))
 
     n_kinds = st.number_input("Number of Anomaly Types", key=f"anomaly-types-{a}", min_value=1)
     kinds = []
@@ -108,16 +110,18 @@ class GutenTAGPage(Page):
 
         st.write("---")
 
-        timeseries = None
+        gt = None
         if st.button("Build Timeseries"):
-            timeseries = timeseries_config.generate_timeseries()
-            timeseries.generate()
-            timeseries.plot()
+            if gt is None:
+                gt = GutenTAG.from_dict({"timeseries": [timeseries_config.config]}, plot=False)
+                gt.generate()
+
+            gt.timeseries[0].plot()
             st.pyplot()
-            # st.pyplot(timeseries.build_figure_base_oscillation())
 
         if st.button("Save"):
-            if timeseries is None:
-                timeseries = timeseries_config.generate_timeseries()
-                timeseries.generate()
-                Files().store_ts(timeseries)
+            if gt is None:
+                gt = GutenTAG.from_dict({"timeseries": [timeseries_config.config]}, plot=False)
+                gt.generate()
+            Files().store_ts(gt)
+            st.write(f"> Successfully saved new time series dataset '{timeseries_config.config['name']}' to disk.")
