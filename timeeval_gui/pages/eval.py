@@ -7,8 +7,10 @@ import time
 from .page import Page
 
 from timeeval import Algorithm
-from timeeval_experiments.algorithms import *
 from timeeval_experiments import algorithms as timeeval_algorithms
+
+# keep this import!
+from timeeval_experiments.algorithms import *
 
 
 algos: List[Algorithm] = [eval(f"{a}()") for a in dir(timeeval_algorithms) if "__" not in a]
@@ -27,18 +29,24 @@ class EvalPage(Page):
         with col1:
             st.write("## Algorithms")
 
-            algorithms = st.multiselect("Algorithms", options=[a.name for a in algos])
+            algorithms: List[Algorithm] = st.multiselect("Algorithms", options=algos, format_func=lambda a: a.name)
 
             st.write("### Parameters")
 
             for algorithm in algorithms:
-                st.write(f"#### {algorithm}")
-                n_param = st.number_input(f"#Parameter Settings", key=f"{algorithm}#params", min_value=0)
+                algo_name = algorithm.name
+                st.write(f"#### {algo_name}")
+                n_param = st.number_input(f"#Parameter Settings", key=f"{algo_name}#params", min_value=0)
                 for p in range(n_param):
-                    with st.expander(f"{algorithm} - Parameter Setting #{p + 1}"):
+                    with st.expander(f"{algo_name} - Parameter Setting #{p + 1}"):
+                        for param in algorithm.param_schema:
+                            st.text_input(algorithm.param_schema[param]["name"],
+                                          value=algorithm.param_schema[param]["defaultValue"],
+                                          help=algorithm.param_schema[param]["description"])
+
                         # todo: unfake
-                        st.number_input("window_size", key=f"ws-{algorithm}-{p}", min_value=1)
-                        st.number_input("n_clusters", key=f"nc-{algorithm}-{p}", min_value=1)
+                        # st.number_input("window_size", key=f"ws-{algo_name}-{p}", min_value=1)
+                        # st.number_input("n_clusters", key=f"nc-{algo_name}-{p}", min_value=1)
 
         with col2:
             st.write("## Datasets")
