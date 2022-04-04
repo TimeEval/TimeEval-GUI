@@ -1,9 +1,9 @@
 import streamlit as st
 
-from .gutentag import GutenTAG
-from .eval import Eval
+from .gutentag import GutenTAGPage
+from .eval import EvalPage
 from .page import Page
-from .results import Results
+from .results import ResultsPage
 
 
 class Pages:
@@ -31,4 +31,4 @@ class Pages:
 
     @staticmethod
     def default() -> 'Pages':
-        return Pages(GutenTAG(), Eval(), Results())
+        return Pages(GutenTAGPage(), EvalPage(), ResultsPage())

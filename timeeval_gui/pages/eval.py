@@ -5,7 +5,7 @@ import time
 from .page import Page
 
 
-class Eval(Page):
+class EvalPage(Page):
     def _get_name(self) -> str:
         return "Eval"
 

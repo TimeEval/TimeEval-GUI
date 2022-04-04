@@ -1,11 +1,13 @@
+import tempfile
+from argparse import Namespace
 from pathlib import Path
 from typing import Dict, Hashable, Any, Optional
 
+import pandas as pd
 import requests
 import yaml
-from gutenTAG.generator import TimeSeries
-from gutenTAG.generator.timeseries import TrainingType
-from gutenTAG.utils.global_variables import UNSUPERVISED_FILENAME, SUPERVISED_FILENAME, SEMI_SUPERVISED_FILENAME
+from gutenTAG import GutenTAG
+from gutenTAG.addons.timeeval import TimeEvalAddOn
 
 from timeeval_gui.config import GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL, TIMEEVAL_FILES_PATH
 
@@ -36,15 +38,25 @@ class Files:
         with self._anomaly_kind_schema_path.open("r") as fh:
             return yaml.load(fh, Loader=yaml.FullLoader)
 
-    def store_ts(self, timeseries: TimeSeries) -> None:
-        path = self._ts_path / timeseries.dataset_name
-        path.mkdir(exist_ok=True)
+    def store_ts(self, gt: GutenTAG) -> None:
+        # process time series with TimeEvalAddOn to create dataset metadata
+        with tempfile.TemporaryDirectory() as tmp_path:
+            tmp_path = Path(tmp_path)
+            TimeEvalAddOn().process(gt.overview, gt, Namespace(output_dir=tmp_path, no_save=False))
+            df_index = pd.read_csv(tmp_path / "datasets.csv").set_index(["collection_name", "dataset_name"])
 
-        timeseries.to_csv(path / UNSUPERVISED_FILENAME, TrainingType.TEST)
-        if timeseries.supervised:
-            timeseries.to_csv(path / SUPERVISED_FILENAME, TrainingType.TRAIN_ANOMALIES)
-        if timeseries.semi_supervised:
-            timeseries.to_csv(path / SEMI_SUPERVISED_FILENAME, TrainingType.TRAIN_NO_ANOMALIES)
+        # store index file (and potentially merge with existing beforehand)
+        if (self._ts_path / "datasets.csv").exists():
+            df_existing_index = pd.read_csv(self._ts_path / "datasets.csv").set_index(
+                ["collection_name", "dataset_name"])
+            df_index = pd.concat([df_existing_index[~df_existing_index.index.isin(df_index.index)], df_index])
+        df_index.to_csv(self._ts_path / "datasets.csv")
+
+        # save time series
+        gt.save_timeseries(self._ts_path)
+
+        # remove overview file (contains outdated information)
+        (self._ts_path / "overview.yaml").unlink()
 
     def _load_anomaly_kind_configuration_schema(self) -> None:
         result = requests.get(GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL)
