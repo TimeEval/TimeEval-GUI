@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, Tuple, List, Type
 
 from timeeval_gui.files import Files
@@ -13,6 +14,66 @@ def get_base_oscillations() -> Dict[str, str]:
         "random-mode-jump": "Random Mode Jump",
         "formula": "Formula"
     }
+
+
+@dataclass
+class BOParameter:
+    key: str
+    name: str
+    tpe: str
+    help: str
+
+
+def get_base_oscillation_parameters(bo: str) -> List[BOParameter]:
+    common = [
+        BOParameter(key="variance", name="Variance", tpe="number", help="Noise factor dependent on amplitude"),
+        BOParameter(key="trend", name="Trend", tpe="object",
+                    help="Defines another base oscillation as trend that gets added to its parent object. "
+                         "Can be recursively used!"),
+        BOParameter(key="offset", name="Offset", tpe="number", help="Gets added to the generated time series"),
+    ]
+    return {
+        "sine": [
+            BOParameter(key="frequency", name="Frequency", tpe="number",
+                        help="Number of sine waves per 100 points"),
+            BOParameter(key="amplitude", name="Amplitude", tpe="number", help="+/- deviation from 0"),
+            BOParameter(key="freq-mod", name="Frequency modulation", tpe="number",
+                        help="Factor (of base frequency) of the frequency modulation that changes the amplitude of the "
+                            "sine wave over time. The carrier wave always has an amplitude of 1.")
+        ],
+        "random-walk": [
+            BOParameter(key="amplitude", name="Amplitude", tpe="number", help="+/- deviation from 0"),
+            BOParameter(key="smoothing", name="Smoothing factor", tpe="number",
+                        help="Smoothing factor for convolution dependent on length")
+        ],
+        "cylinder-bell-funnel": [
+            BOParameter(key="avg-pattern-length", name="Average pattern length", tpe="integer",
+                        help="Average length of pattern in time series"),
+            BOParameter(key="amplitude", name="Amplitude", tpe="number",
+                        help="Average amplitude of pattern in time series"),
+            BOParameter(key="variance-pattern-length", name="Variance pattern length", tpe="number",
+                        help="Variance of pattern length in time series"),
+            BOParameter(key="variance-amplitude", name="Variance amplitude", tpe="number",
+                        help="Variance of amplitude of pattern in time series"),
+        ],
+        "ecg": [
+            BOParameter(key="frequency", name="Frequency", tpe="number", help="Number of hear beats per 100 points")
+        ],
+        "polynomial": [
+            BOParameter(key="polynomial", name="Polynomial parameters", tpe="list[number]",
+                        help="See numpy documentation: https://numpy.org/doc/stable/reference/generated/numpy.polynomial.polynomial.Polynomial.html#numpy.polynomial.polynomial.Polynomial")
+        ],
+        "random-mode-jump": [
+            BOParameter(key="frequency", name="Frequency", tpe="number",
+                        help="Number of jumps in Time Series"),
+            BOParameter(key="channel_diff", name="Channel mode difference", tpe="number",
+                        help="Value difference of absolute mode values between channels"),
+            BOParameter(key="channel_offset", name="Channel offset", tpe="number",
+                        help="Value offset from 0 in both directions"),
+            BOParameter(key="random_seed", name="Random seed", tpe="integer",
+                        help="Random seed to have the similar channels"),
+        ]
+    }.get(bo, []) + common
 
 
 def get_anomaly_types() -> Dict[str, str]:

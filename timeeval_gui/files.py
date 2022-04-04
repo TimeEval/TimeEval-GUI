@@ -3,6 +3,9 @@ from typing import Dict, Hashable, Any, Optional
 
 import requests
 import yaml
+from gutenTAG.generator import TimeSeries
+from gutenTAG.generator.timeseries import TrainingType
+from gutenTAG.utils.global_variables import UNSUPERVISED_FILENAME, SUPERVISED_FILENAME, SEMI_SUPERVISED_FILENAME
 
 from timeeval_gui.config import GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL, TIMEEVAL_FILES_PATH
 
@@ -33,8 +36,17 @@ class Files:
         with self._anomaly_kind_schema_path.open("r") as fh:
             return yaml.load(fh, Loader=yaml.FullLoader)
 
+    def store_ts(self, timeseries: TimeSeries) -> None:
+        path = self._ts_path / timeseries.dataset_name
+        path.mkdir(exist_ok=True)
+
+        timeseries.to_csv(path / UNSUPERVISED_FILENAME, TrainingType.TEST)
+        if timeseries.supervised:
+            timeseries.to_csv(path / SUPERVISED_FILENAME, TrainingType.TRAIN_ANOMALIES)
+        if timeseries.semi_supervised:
+            timeseries.to_csv(path / SEMI_SUPERVISED_FILENAME, TrainingType.TRAIN_NO_ANOMALIES)
+
     def _load_anomaly_kind_configuration_schema(self) -> None:
         result = requests.get(GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL)
-        print(result)
         with self._anomaly_kind_schema_path.open("w") as fh:
             fh.write(result.text)
