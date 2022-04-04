@@ -44,9 +44,6 @@ def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
             warn_msg = f"Input type ({p.tpe}) for parameter {p.name} of BO {base_oscillation[1]} not supported yet!"
             warnings.warn(warn_msg)
             st.warning(warn_msg)
-    # frequency = st.number_input("Frequency (#repetitions/100)", key=f"frequency-{c}")
-    # variance = st.number_input("Variance", key=f"variance-{c}", help="Noise factor dependent on amplitude")
-    # offset = st.number_input("Offset", key=f"offset-{c}", help="Gets added to the generated time series")
     ts_config.add_base_oscillation(base_oscillation[0], **param_config)
 
     return ts_config

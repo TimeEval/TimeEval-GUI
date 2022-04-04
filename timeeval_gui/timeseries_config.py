@@ -11,7 +11,6 @@ class TimeSeriesConfig:
         self.config: Dict[str, Any] = {
             "name": "",
             "length": 10,
-            "channels": 0,
             "semi-supervised": False,
             "supervised": False,
             "base-oscillations": [],
@@ -31,8 +30,7 @@ class TimeSeriesConfig:
         self.config["semi-supervised"] = True
 
     def add_base_oscillation(self, kind: str, **kwargs):
-        self.config["channels"] += 1
-        self.config["base-oscillations"].append(dict(kind=kind, **kwargs))
+        self.config["base-oscillations"].append({kind: kind, **kwargs})
 
     def add_anomaly(self, **kwargs):
         self.config["anomalies"].append(kwargs)
@@ -53,3 +51,6 @@ class TimeSeriesConfig:
 
     def __getattr__(self, item):
         return self.config[item]
+
+    def __repr__(self):
+        return f"TimeSeriesConfig(config={self.config})"
