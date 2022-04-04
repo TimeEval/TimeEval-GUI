@@ -82,7 +82,7 @@ def parameter_area(a, t, anomaly_type: str) -> Dict:
     return param_conf
 
 
-class GutenTAG(Page):
+class GutenTAGPage(Page):
     def _get_name(self) -> str:
         return "GutenTAG"
 

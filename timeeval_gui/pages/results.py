@@ -114,7 +114,7 @@ def plot_scores_plt(algorithms, auroc, df_scores, df_dataset, dataset_dim, datas
     return fig
 
 
-class Results(Page):
+class ResultsPage(Page):
     def _get_name(self) -> str:
         return "Results"
 
