@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Dict
 
 from gutenTAG.anomalies import Anomaly
 from gutenTAG.base_oscillations import BaseOscillationInterface, BaseOscillation
@@ -8,7 +8,7 @@ from gutenTAG.generator.parser import ConfigParser
 
 class TimeSeriesConfig:
     def __init__(self):
-        self.config = {
+        self.config: Dict[str, Any] = {
             "base-oscillations": [],
             "anomalies": []
         }
