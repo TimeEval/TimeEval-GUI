@@ -1,5 +1,5 @@
 import warnings
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any, Optional
 
 import streamlit as st
 from gutenTAG import GutenTAG
@@ -28,10 +28,9 @@ def select_base_oscillation(key="base-oscillation") -> Tuple[str, str]:
     return value
 
 
-def select_anomaly_type(key="anomaly-type") -> Tuple[str, str]:
-    bos = get_anomaly_types()
-    value = st.selectbox("Anomaly Type", bos.items(), format_func=lambda x: x[1], key=key)
-    return value
+def select_anomaly_type(key: str, bo_kind: str) -> Tuple[str, str]:
+    anomaly_types = get_anomaly_types(bo_kind)
+    return st.selectbox("Anomaly Type", anomaly_types.items(), format_func=lambda x: x[1], key=key)
 
 
 def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
@@ -39,8 +38,10 @@ def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
     parameters = get_base_oscillation_parameters(base_oscillation[0])
     param_config = {}
     for p in parameters:
-        if p.tpe in ["number", "integer"]:
+        if p.tpe == "number":
             param_config[p.key] = st.number_input(p.name, key=f"{p.key}-{c}", help=p.help)
+        elif p.tpe == "integer":
+            param_config[p.key] = int(st.number_input(p.name, key=f"{p.key}-{c}", help=p.help))
         else:
             warn_msg = f"Input type ({p.tpe}) for parameter {p.name} of BO {base_oscillation[1]} not supported yet!"
             warnings.warn(warn_msg)
@@ -60,27 +61,33 @@ def anomaly_area(a, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
     kinds = []
     for t in range(int(n_kinds)):
         st.write(f"##### Type {t}")
-        anomaly_type, _ = select_anomaly_type(f"anomaly-type-{a}-{t}")
-        parameters = parameter_area(a, t, anomaly_type)
+        bo_kind = ts_config.config["base-oscillations"][channel]["kind"]
+        anomaly_type, _ = select_anomaly_type(f"anomaly-type-{a}-{t}", bo_kind)
+        parameters = parameter_area(a, t, anomaly_type, bo_kind)
         kinds.append({"kind": anomaly_type, "parameters": parameters})
 
     ts_config.add_anomaly(position=position, length=length, channel=channel, kinds=kinds)
     return ts_config
 
 
-def parameter_area(a, t, anomaly_type: str) -> Dict:
+def parameter_area(a, t, anomaly_type: str, bo_kind: str) -> Dict:
     param_conf = {}
     parameters = get_anomaly_params(anomaly_type)
-    for name, p in parameters:
+    for name, p, desc in parameters:
+        if name.lower() == "sinusoid_k" and bo_kind != "sine":
+            continue
+        if name.lower() == "cbf_pattern_factor" and bo_kind != "cylinder-bell-funnel":
+            continue
+
         key = f"{a}-{t}-{name}"
         if p == str:
-            param_conf[name] = st.text_input(name.upper(), key=key)
+            param_conf[name] = st.text_input(name.upper(), key=key, help=desc)
         elif p == bool:
-            param_conf[name] = st.checkbox(name.upper(), key=key)
+            param_conf[name] = st.checkbox(name.upper(), key=key, help=desc)
         elif p == int:
-            param_conf[name] = st.number_input(name.upper(), key=key, step=1)
+            param_conf[name] = st.number_input(name.upper(), key=key, step=1, help=desc)
         elif p == float:
-            param_conf[name] = st.number_input(name.upper(), key=key)
+            param_conf[name] = st.number_input(name.upper(), key=key, help=desc)
     return param_conf
 
 
