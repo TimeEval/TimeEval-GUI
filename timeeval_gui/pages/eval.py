@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict, Any, Optional, Union
 
+import docker
 import psutil
 import streamlit as st
 import timeeval_gui.st_redirect as rd
@@ -20,6 +21,17 @@ from timeeval_experiments.algorithms import *
 
 
 algos: List[Algorithm] = [eval(f"{a}(skip_pull={SKIP_DOCKER_PULL})") for a in dir(timeeval_algorithms) if "__" not in a]
+if SKIP_DOCKER_PULL:
+    # filter out non-existent images from algorithm choices
+    docker_client = docker.from_env()
+
+    def image_exists(name: str, tag: str) -> bool:
+        images = docker_client.images.list(name=f"{name}:{tag}")
+        return len(images) > 0
+
+    algos = [a for a in algos if image_exists(a.main.image_name, a.main.tag)]
+    del docker_client
+
 for algo in algos:
     st.session_state.setdefault(f"eval-{algo.name}-n_params", 0)
 
@@ -238,20 +250,19 @@ class EvalPage(Page):
             limits = rc.get_compute_resource_limits()
             st.info(f"Resulting resource limits: cpu={limits[1]:.2f}, mem={limits[0] / GB:.0f} GB")
 
-        timeeval = TimeEval(
-            dmgr, datasets, algorithms,
-            results_path=Files().results_folder(),
-            distributed=False,
-            repetitions=repetitions,
-            resource_constraints=rc,
-            metrics=metrics,
-            skip_invalid_combinations=True,
-            force_training_type_match=force_training_type_match,
-            force_dimensionality_match=force_dimensionality_match,
-            disable_progress_bar=True
-        )
-
         if st.button("Start Experiment"):
+            timeeval = TimeEval(
+                dmgr, datasets, algorithms,
+                results_path=Files().results_folder(),
+                distributed=False,
+                repetitions=repetitions,
+                resource_constraints=rc,
+                metrics=metrics,
+                skip_invalid_combinations=True,
+                force_training_type_match=force_training_type_match,
+                force_dimensionality_match=force_dimensionality_match,
+                disable_progress_bar=True
+            )
 
             # reset logging backend
             logging.root.handlers = []
@@ -268,7 +279,7 @@ class EvalPage(Page):
                 timeeval.run()
             st.success(f"... evaluation done!")
 
-        st.write("## Results")
+            st.write("## Results")
 
-        df_results = timeeval.get_results(aggregated=True, short=True)
-        st.dataframe(df_results)
+            df_results = timeeval.get_results(aggregated=True, short=True)
+            st.dataframe(df_results)
