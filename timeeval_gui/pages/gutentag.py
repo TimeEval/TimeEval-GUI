@@ -1,5 +1,5 @@
 import warnings
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict
 
 import streamlit as st
 from gutenTAG import GutenTAG
@@ -131,4 +131,4 @@ class GutenTAGPage(Page):
                 gt = GutenTAG.from_dict({"timeseries": [timeseries_config.config]}, plot=False)
                 gt.generate()
             Files().store_ts(gt)
-            st.write(f"> Successfully saved new time series dataset '{timeseries_config.config['name']}' to disk.")
+            st.success(f"> Successfully saved new time series dataset '{timeseries_config.config['name']}' to disk.")

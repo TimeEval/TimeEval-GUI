@@ -8,6 +8,7 @@ import requests
 import yaml
 from gutenTAG import GutenTAG
 from gutenTAG.addons.timeeval import TimeEvalAddOn
+from timeeval import Datasets, DatasetManager
 
 from timeeval_gui.config import GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL, TIMEEVAL_FILES_PATH
 
@@ -30,6 +31,8 @@ class Files:
         self._anomaly_kind_schema_path.parent.mkdir(exist_ok=True)
         self._ts_path = self._files_path / "timeseries"
         self._ts_path.mkdir(exist_ok=True)
+        self._results_path = self._files_path / "results"
+        self._results_path.mkdir(exist_ok=True)
 
     def anomaly_kind_configuration_schema(self) -> Dict[Hashable, Any]:
         # load parameter configuration only once
@@ -57,6 +60,12 @@ class Files:
 
         # remove overview file (contains outdated information)
         (self._ts_path / "overview.yaml").unlink()
+
+    def dmgr(self) -> Datasets:
+        return DatasetManager(self._ts_path, create_if_missing=False)
+
+    def results_folder(self) -> Path:
+        return self._results_path
 
     def _load_anomaly_kind_configuration_schema(self) -> None:
         result = requests.get(GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL)
