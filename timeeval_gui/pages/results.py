@@ -5,21 +5,38 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-from timeeval import DatasetManager
+from timeeval import DatasetManager, Datasets
 
 from .page import Page
 
 
-def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", fmt_label=lambda x: x) -> plt.Figure:
+@st.cache(show_spinner=True, max_entries=1)
+def load_results(results_path: Path) -> pd.DataFrame:
+    res = pd.read_csv(results_path / "results.csv")
+    res["dataset_name"] = res["dataset"].str.split(".").str[0]
+    res["overall_time"] = res["execute_main_time"].fillna(0) + res["train_main_time"].fillna(0)
+    res = res.drop_duplicates()
+    return res
+
+
+@st.cache(show_spinner=True, max_entries=1)
+def create_dmgr(data_path: Path) -> Datasets:
+    return DatasetManager(data_path, create_if_missing=False)
+
+
+# cache runs endlessly, but I don't know why. experimental_memo, however, works great!
+# @st.cache(show_spinner=True, max_entries=100, hash_funcs={pd.DataFrame: pd.util.hash_pandas_object, "builtins.function": lambda _: None})
+@st.experimental_memo(show_spinner=True, max_entries=100)
+def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", _fmt_label=lambda x: x) -> plt.Figure:
     if n_show is not None:
         n_show = n_show // 2
         title = title + f" (worst {n_show} and best {n_show} algorithms)"
         df_boxplot = pd.concat([df.iloc[:, :n_show], df.iloc[:, -n_show:]])
     else:
         title = title + f" (sorted by {ax_label})"
-        df_boxplot = df
+        df_boxplot = pd.DataFrame(df)
     labels = df_boxplot.columns
-    labels = [fmt_label(c) for c in labels]
+    labels = [_fmt_label(c) for c in labels]
     values = [df_boxplot[c].dropna().values for c in df_boxplot.columns]
     fig = plt.figure()
     ax = fig.gca()
@@ -121,12 +138,6 @@ class ResultsPage(Page):
     def _get_name(self) -> str:
         return "Results"
 
-    def _preprocess_results(self, res: pd.DataFrame) -> pd.DataFrame:
-        res["dataset_name"] = res["dataset"].str.split(".").str[0]
-        res["overall_time"] = res["execute_main_time"].fillna(0) + res["train_main_time"].fillna(0)
-        res = res.drop_duplicates()
-        return res
-
     def _overall_results(self, res: pd.DataFrame):
         st.header("Experiment run results")
         st.dataframe(res)
@@ -154,7 +165,7 @@ class ResultsPage(Page):
                 st.write(tpe)
                 st.dataframe(df_error_counts.loc[tpe])
 
-    def _plot_experiment(self, res: pd.DataFrame, dmgr: DatasetManager, results_path: Path):
+    def _plot_experiment(self, res: pd.DataFrame, dmgr: Datasets, results_path: Path):
         st.header("Plot Single Experiment")
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -183,14 +194,16 @@ class ResultsPage(Page):
         df_asl = df_asl.sort_values(by="mean", ascending=True)
         df_asl = df_asl.drop(columns="mean").T
 
+        df_lut = self._df_overall_scores(res)
+
         st.header("Quality Summary")
-        if st.checkbox("Show only best and worse", key="nshow-check-quality"):
-            n_show = st.number_input("Show worst and best n algorithms", key="nshow_roc", min_value=2)
+        if st.checkbox("Show only best and worse", key="nshow-check-quality", value=True):
+            n_show = st.number_input("Show worst and best n algorithms", key="nshow_roc", min_value=2, max_value=df_lut.shape[0], value=10)
         else:
             n_show = None
-        fmt_label = lambda c: f"{c} (ROC_AUC={self._df_overall_scores(res).loc[c, 'mean']:.2f})"
+        fmt_label = lambda c: f"{c} (ROC_AUC={df_lut.loc[c, 'mean']:.2f})"
 
-        fig = plot_boxplot(df_asl, n_show=n_show, title="AUC_ROC box plots", ax_label="AUC_ROC score", fmt_label=fmt_label)
+        fig = plot_boxplot(df_asl, n_show=n_show, title="AUC_ROC box plots", ax_label="AUC_ROC score", _fmt_label=fmt_label)
         st.pyplot(fig)
 
     def _runtime_summary(self, res: pd.DataFrame):
@@ -200,13 +213,16 @@ class ResultsPage(Page):
         df_arl = df_arl.sort_values(by="mean", ascending=True)
         df_arl = df_arl.drop(columns="mean").T
 
+        df_lut = self._df_overall_scores(res)
+
         st.header("Runtime Summary")
-        if st.checkbox("Show only best and worse", key="nshow-check-rt"):
-            n_show = st.number_input("Show worst and best n algorithms", key="nshow_rt", min_value=2)
+        if st.checkbox("Show only best and worse", key="nshow-check-rt", value=True):
+            n_show = st.number_input("Show worst and best n algorithms", key="nshow_rt", min_value=2, max_value=df_lut.shape[0], value=10)
         else:
             n_show = None
-        fmt_label = lambda c: f"{c} (ROC_AUC={self._df_overall_scores(res).loc[c, 'mean']:.2f})" if c in self._df_overall_scores(res).index else c
-        fig = plot_boxplot(df_arl, n_show=n_show, title="Overall runtime box plots", ax_label="Overall runtime (in seconds)", fmt_label=fmt_label)
+        fmt_label = lambda c: f"{c} (ROC_AUC={df_lut.loc[c, 'mean']:.2f})" if c in df_lut.index else c
+
+        fig = plot_boxplot(df_arl, n_show=n_show, title="Overall runtime box plots", ax_label="Overall runtime (in seconds)", _fmt_label=fmt_label)
         st.pyplot(fig)
 
     def render(self):
@@ -217,9 +233,8 @@ class ResultsPage(Page):
         if results_path != "" and data_path != "":
             results_path = Path(results_path)
             data_path = Path(data_path)
-            res = pd.read_csv(results_path / "results.csv")
-            res = self._preprocess_results(res)
-            dmgr = DatasetManager(data_path)
+            res = load_results(results_path)
+            dmgr = create_dmgr(data_path)
 
             self._overall_results(res)
             self._error_summary(res)
