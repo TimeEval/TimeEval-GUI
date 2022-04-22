@@ -5,21 +5,38 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-from timeeval import DatasetManager
+from timeeval import DatasetManager, Datasets
 
 from .page import Page
 
 
-def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", fmt_label=lambda x: x) -> plt.Figure:
+@st.cache(show_spinner=True, max_entries=1)
+def load_results(results_path: Path) -> pd.DataFrame:
+    res = pd.read_csv(results_path / "results.csv")
+    res["dataset_name"] = res["dataset"].str.split(".").str[0]
+    res["overall_time"] = res["execute_main_time"].fillna(0) + res["train_main_time"].fillna(0)
+    res = res.drop_duplicates()
+    return res
+
+
+@st.cache(show_spinner=True, max_entries=1)
+def create_dmgr(data_path: Path) -> Datasets:
+    return DatasetManager(data_path, create_if_missing=False)
+
+
+# cache runs endlessly, but I don't know why. experimental_memo, however, works great!
+# @st.cache(show_spinner=True, max_entries=100, hash_funcs={pd.DataFrame: pd.util.hash_pandas_object, "builtins.function": lambda _: None})
+@st.experimental_memo(show_spinner=True, max_entries=100)
+def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", _fmt_label=lambda x: x) -> plt.Figure:
     if n_show is not None:
         n_show = n_show // 2
         title = title + f" (worst {n_show} and best {n_show} algorithms)"
         df_boxplot = pd.concat([df.iloc[:, :n_show], df.iloc[:, -n_show:]])
     else:
         title = title + f" (sorted by {ax_label})"
-        df_boxplot = df
+        df_boxplot = pd.DataFrame(df)
     labels = df_boxplot.columns
-    labels = [fmt_label(c) for c in labels]
+    labels = [_fmt_label(c) for c in labels]
     values = [df_boxplot[c].dropna().values for c in df_boxplot.columns]
     fig = plt.figure()
     ax = fig.gca()
@@ -50,19 +67,22 @@ def load_scores_df(algorithm_name, dataset_id, df, result_path, repetition=1):
     return pd.read_csv(path, header=None)
 
 
-def plot_scores(algorithm_name, dataset_name, df, dmgr, result_path, **kwargs):
+def plot_scores(algorithm_name, collection_name, dataset_name, df, dmgr, result_path, **kwargs):
     if not isinstance(algorithm_name, list):
         algorithms = [algorithm_name]
     else:
         algorithms = algorithm_name
     # construct dataset ID
-    dataset_id = ("GutenTAG", f"{dataset_name}.unsupervised")
+    if collection_name == "GutenTAG" and not dataset_name.endswith("supervised"):
+        dataset_id = (collection_name, f"{dataset_name}.unsupervised")
+    else:
+        dataset_id = (collection_name, dataset_name)
 
     # load dataset details
     df_dataset = dmgr.get_dataset_df(dataset_id)
 
     # check if dataset is multivariate
-    dataset_dim = df.loc[df["dataset_name"] == dataset_name, "dataset_input_dimensionality"].unique().item()
+    dataset_dim = df.loc[(df["collection"] == collection_name) & (df["dataset_name"] == dataset_name), "dataset_input_dimensionality"].unique().item()
     dataset_dim = dataset_dim.lower()
 
     auroc = {}
@@ -73,7 +93,7 @@ def plot_scores(algorithm_name, dataset_name, df, dmgr, result_path, **kwargs):
         algos.append(algo)
         # get algorithm metric results
         try:
-            auroc[algo] = df.loc[(df["algorithm"] == algo) & (df["dataset_name"] == dataset_name), "ROC_AUC"].item()
+            auroc[algo] = df.loc[(df["algorithm"] == algo) & (df["collection"] == collection_name) & (df["dataset_name"] == dataset_name), "ROC_AUC"].item()
         except ValueError:
             st.warning(f"No ROC_AUC score found! Probably {algo} was not executed on {dataset_name}.")
             auroc[algo] = -1
@@ -83,7 +103,7 @@ def plot_scores(algorithm_name, dataset_name, df, dmgr, result_path, **kwargs):
         # load scores
         training_type = df.loc[df["algorithm"] == algo, "algo_training_type"].values[0].lower().replace("_", "-")
         try:
-            df_scores[algo] = load_scores_df(algo, ("GutenTAG", f"{dataset_name}.{training_type}"), df, result_path).iloc[:, 0]
+            df_scores[algo] = load_scores_df(algo, dataset_id, df, result_path).iloc[:, 0]
         except (ValueError, FileNotFoundError):
             st.warning(f"No anomaly scores found! Probably {algo} was not executed on {dataset_name}.")
             df_scores[algo] = np.nan
@@ -118,12 +138,6 @@ class ResultsPage(Page):
     def _get_name(self) -> str:
         return "Results"
 
-    def _preprocess_results(self, res: pd.DataFrame) -> pd.DataFrame:
-        res["dataset_name"] = res["dataset"].str.split(".").str[0]
-        res["overall_time"] = res["execute_main_time"].fillna(0) + res["train_main_time"].fillna(0)
-        res = res.drop_duplicates()
-        return res
-
     def _overall_results(self, res: pd.DataFrame):
         st.header("Experiment run results")
         st.dataframe(res)
@@ -151,7 +165,7 @@ class ResultsPage(Page):
                 st.write(tpe)
                 st.dataframe(df_error_counts.loc[tpe])
 
-    def _plot_experiment(self, res: pd.DataFrame, dmgr: DatasetManager, results_path: Path):
+    def _plot_experiment(self, res: pd.DataFrame, dmgr: Datasets, results_path: Path):
         st.header("Plot Single Experiment")
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -159,9 +173,11 @@ class ResultsPage(Page):
         with col2:
             dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique())
         with col3:
-            algorithm_name = st.selectbox("Algorithm", res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique())
-        if st.button("Plot"):
-            fig = plot_scores(algorithm_name, dataset, res, dmgr, results_path)
+            options = res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique()
+            options = [None] + list(options)
+            algorithm_name = st.selectbox("Algorithm", options, index=0)
+        if algorithm_name is not None:
+            fig = plot_scores(algorithm_name, collection, dataset, res, dmgr, results_path)
             st.pyplot(fig)
 
     def _df_overall_scores(self, res: pd.DataFrame) -> pd.DataFrame:
@@ -178,14 +194,16 @@ class ResultsPage(Page):
         df_asl = df_asl.sort_values(by="mean", ascending=True)
         df_asl = df_asl.drop(columns="mean").T
 
+        df_lut = self._df_overall_scores(res)
+
         st.header("Quality Summary")
-        if st.checkbox("Show only best and worse", key="nshow-check-quality"):
-            n_show = st.number_input("Show worst and best n algorithms", key="nshow_roc", min_value=2)
+        if st.checkbox("Show only best and worse", key="nshow-check-quality", value=True):
+            n_show = st.number_input("Show worst and best n algorithms", key="nshow_roc", min_value=2, max_value=df_lut.shape[0], value=10)
         else:
             n_show = None
-        fmt_label = lambda c: f"{c} (ROC_AUC={self._df_overall_scores(res).loc[c, 'mean']:.2f})"
+        fmt_label = lambda c: f"{c} (ROC_AUC={df_lut.loc[c, 'mean']:.2f})"
 
-        fig = plot_boxplot(df_asl, n_show=n_show, title="AUC_ROC box plots", ax_label="AUC_ROC score", fmt_label=fmt_label)
+        fig = plot_boxplot(df_asl, n_show=n_show, title="AUC_ROC box plots", ax_label="AUC_ROC score", _fmt_label=fmt_label)
         st.pyplot(fig)
 
     def _runtime_summary(self, res: pd.DataFrame):
@@ -195,13 +213,16 @@ class ResultsPage(Page):
         df_arl = df_arl.sort_values(by="mean", ascending=True)
         df_arl = df_arl.drop(columns="mean").T
 
+        df_lut = self._df_overall_scores(res)
+
         st.header("Runtime Summary")
-        if st.checkbox("Show only best and worse", key="nshow-check-rt"):
-            n_show = st.number_input("Show worst and best n algorithms", key="nshow_rt", min_value=2)
+        if st.checkbox("Show only best and worse", key="nshow-check-rt", value=True):
+            n_show = st.number_input("Show worst and best n algorithms", key="nshow_rt", min_value=2, max_value=df_lut.shape[0], value=10)
         else:
             n_show = None
-        fmt_label = lambda c: f"{c} (ROC_AUC={self._df_overall_scores(res).loc[c, 'mean']:.2f})" if c in self._df_overall_scores(res).index else c
-        fig = plot_boxplot(df_arl, n_show=n_show, title="Overall runtime box plots", ax_label="Overall runtime (in seconds)", fmt_label=fmt_label)
+        fmt_label = lambda c: f"{c} (ROC_AUC={df_lut.loc[c, 'mean']:.2f})" if c in df_lut.index else c
+
+        fig = plot_boxplot(df_arl, n_show=n_show, title="Overall runtime box plots", ax_label="Overall runtime (in seconds)", _fmt_label=fmt_label)
         st.pyplot(fig)
 
     def render(self):
@@ -212,9 +233,8 @@ class ResultsPage(Page):
         if results_path != "" and data_path != "":
             results_path = Path(results_path)
             data_path = Path(data_path)
-            res = pd.read_csv(results_path / "results.csv")
-            res = self._preprocess_results(res)
-            dmgr = DatasetManager(data_path)
+            res = load_results(results_path)
+            dmgr = create_dmgr(data_path)
 
             self._overall_results(res)
             self._error_summary(res)
