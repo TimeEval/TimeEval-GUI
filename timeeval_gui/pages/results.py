@@ -50,19 +50,22 @@ def load_scores_df(algorithm_name, dataset_id, df, result_path, repetition=1):
     return pd.read_csv(path, header=None)
 
 
-def plot_scores(algorithm_name, dataset_name, df, dmgr, result_path, **kwargs):
+def plot_scores(algorithm_name, collection_name, dataset_name, df, dmgr, result_path, **kwargs):
     if not isinstance(algorithm_name, list):
         algorithms = [algorithm_name]
     else:
         algorithms = algorithm_name
     # construct dataset ID
-    dataset_id = ("GutenTAG", f"{dataset_name}.unsupervised")
+    if collection_name == "GutenTAG" and not dataset_name.endswith("supervised"):
+        dataset_id = (collection_name, f"{dataset_name}.unsupervised")
+    else:
+        dataset_id = (collection_name, dataset_name)
 
     # load dataset details
     df_dataset = dmgr.get_dataset_df(dataset_id)
 
     # check if dataset is multivariate
-    dataset_dim = df.loc[df["dataset_name"] == dataset_name, "dataset_input_dimensionality"].unique().item()
+    dataset_dim = df.loc[(df["collection"] == collection_name) & (df["dataset_name"] == dataset_name), "dataset_input_dimensionality"].unique().item()
     dataset_dim = dataset_dim.lower()
 
     auroc = {}
@@ -73,7 +76,7 @@ def plot_scores(algorithm_name, dataset_name, df, dmgr, result_path, **kwargs):
         algos.append(algo)
         # get algorithm metric results
         try:
-            auroc[algo] = df.loc[(df["algorithm"] == algo) & (df["dataset_name"] == dataset_name), "ROC_AUC"].item()
+            auroc[algo] = df.loc[(df["algorithm"] == algo) & (df["collection"] == collection_name) & (df["dataset_name"] == dataset_name), "ROC_AUC"].item()
         except ValueError:
             st.warning(f"No ROC_AUC score found! Probably {algo} was not executed on {dataset_name}.")
             auroc[algo] = -1
@@ -83,7 +86,7 @@ def plot_scores(algorithm_name, dataset_name, df, dmgr, result_path, **kwargs):
         # load scores
         training_type = df.loc[df["algorithm"] == algo, "algo_training_type"].values[0].lower().replace("_", "-")
         try:
-            df_scores[algo] = load_scores_df(algo, ("GutenTAG", f"{dataset_name}.{training_type}"), df, result_path).iloc[:, 0]
+            df_scores[algo] = load_scores_df(algo, dataset_id, df, result_path).iloc[:, 0]
         except (ValueError, FileNotFoundError):
             st.warning(f"No anomaly scores found! Probably {algo} was not executed on {dataset_name}.")
             df_scores[algo] = np.nan
@@ -159,9 +162,11 @@ class ResultsPage(Page):
         with col2:
             dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique())
         with col3:
-            algorithm_name = st.selectbox("Algorithm", res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique())
-        if st.button("Plot"):
-            fig = plot_scores(algorithm_name, dataset, res, dmgr, results_path)
+            options = res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique()
+            options = [None] + list(options)
+            algorithm_name = st.selectbox("Algorithm", options, index=0)
+        if algorithm_name is not None:
+            fig = plot_scores(algorithm_name, collection, dataset, res, dmgr, results_path)
             st.pyplot(fig)
 
     def _df_overall_scores(self, res: pd.DataFrame) -> pd.DataFrame:
