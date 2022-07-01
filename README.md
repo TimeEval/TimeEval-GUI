@@ -38,6 +38,14 @@ As initial resources for evaluations, we provide over 1,000 benchmark datasets a
 
 ## Installation and Usage (tl;dr)
 
+TimeEval is tested on Linux and Mac operating systems and supports Python 3.7 until 3.9.
+
+We don't support Python 3.10 or higher at the moment because downstream libraries are incompatible.
+
+> We haven't tested if TimeEval runs on Windows.
+> If you use Windows, please help us and test if TimeEval runs correctly.
+> If there are any issues, don't hesitate to contact us.
+
 ### Web frontend
 
 ```shell
@@ -75,8 +83,39 @@ For usage instructions of the respective Python APIs, please consider the projec
 
 If you use the TimeEval toolkit or any of its components in your project or research, please cite our demonstration paper:
 
-> tbd
+> Phillip Wenig, Sebastian Schmidl, and Thorsten Papenbrock.
+> TimeEval: A Benchmarking Toolkit for Time Series Anomaly Detection Algorithms. PVLDB, 15(12): XXXX - XXXX, 2022.
+> doi:[YYYY](https://doi.org/YYYY)
+>
+> _To appear in [PVLDB 2022 volume 15 issue 12](https://vldb.org/2022/)_.
 
 If you use our evaluation results or our benchmark datasets and algorithms, please cite our evaluation paper:
 
-> tbd
+> Sebastian Schmidl, Phillip Wenig, and Thorsten Papenbrock.
+> Anomaly Detection in Time Series: A Comprehensive Evaluation. PVLDB, 15(9): 1779 - 1797, 2022.
+> doi:[10.14778/3538598.3538602](https://doi.org/10.14778/3538598.3538602)
+
+You can use the following BibTeX entries:
+
+```bibtex
+@article{WenigEtAl2022TimeEval,
+  title = {TimeEval: {{A}} Benchmarking Toolkit for Time Series Anomaly Detection Algorithms},
+  author = {Wenig, Phillip and Schmidl, Sebastian and Papenbrock, Thorsten},
+  date = {2022},
+  journaltitle = {Proceedings of the {{VLDB Endowment}} ({{PVLDB}})},
+  volume = {15},
+  number = {12},
+  pages = {XXXX--XXXX},
+  doi = {YYYY}
+}
+@article{SchmidlEtAl2022Anomaly,
+  title = {Anomaly Detection in Time Series: {{A}} Comprehensive Evaluation},
+  author = {Schmidl, Sebastian and Wenig, Phillip and Papenbrock, Thorsten},
+  date = {2022},
+  journaltitle = {Proceedings of the {{VLDB Endowment}} ({{PVLDB}})},
+  volume = {15},
+  number = {9},
+  pages = {1779--1797},
+  doi = {10.14778/3538598.3538602}
+}
+```
