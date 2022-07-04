@@ -173,7 +173,7 @@ class ResultsPage(Page):
         with col2:
             dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique())
         with col3:
-            options = res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status == "Status.OK")]["algorithm"].unique()
+            options = res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status.isin(["Status.OK", "OK"]))]["algorithm"].unique()
             options = [None] + list(options)
             algorithm_name = st.selectbox("Algorithm", options, index=0)
         if algorithm_name is not None:
