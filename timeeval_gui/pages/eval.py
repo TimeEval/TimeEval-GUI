@@ -1,10 +1,11 @@
 import logging
+import sys
 from typing import List, Dict, Any, Optional, Union
 
 import docker
 import psutil
 import streamlit as st
-import timeeval_gui.st_redirect as rd
+from docker.errors import DockerException
 from durations import Duration
 from streamlit.state import NoValue
 from timeeval import Algorithm, ResourceConstraints, Metric, TimeEval
@@ -12,6 +13,7 @@ from timeeval.params import FixedParameters, FullParameterGrid, IndependentParam
 from timeeval.resource_constraints import GB
 from timeeval_experiments import algorithms as timeeval_algorithms
 
+import timeeval_gui.st_redirect as rd
 from .page import Page
 from ..config import SKIP_DOCKER_PULL
 from ..files import Files
@@ -20,17 +22,26 @@ from ..files import Files
 from timeeval_experiments.algorithms import *
 
 
-algos: List[Algorithm] = [eval(f"{a}(skip_pull={SKIP_DOCKER_PULL})") for a in dir(timeeval_algorithms) if "__" not in a]
-if SKIP_DOCKER_PULL:
-    # filter out non-existent images from algorithm choices
-    docker_client = docker.from_env()
+def create_algorithm_list() -> List[Algorithm]:
+    algorithms = [eval(f"{a}(skip_pull={SKIP_DOCKER_PULL})") for a in dir(timeeval_algorithms) if "__" not in a]
+    if SKIP_DOCKER_PULL:
+        # filter out non-existent images from algorithm choices
+        try:
+            docker_client = docker.from_env()
+        except DockerException as e:
+            print(f"Could not connect to docker! {e}", file=sys.stderr)
+            return []
 
-    def image_exists(name: str, tag: str) -> bool:
-        images = docker_client.images.list(name=f"{name}:{tag}")
-        return len(images) > 0
+        def image_exists(name: str, tag: str) -> bool:
+            images = docker_client.images.list(name=f"{name}:{tag}")
+            return len(images) > 0
 
-    algos = [a for a in algos if image_exists(a.main.image_name, a.main.tag)]
-    del docker_client
+        algorithms = [a for a in algorithms if image_exists(a.main.image_name, a.main.tag)]
+        del docker_client
+        return algorithms
+
+
+algos: List[Algorithm] = create_algorithm_list()
 
 for algo in algos:
     st.session_state.setdefault(f"eval-{algo.name}-n_params", 0)

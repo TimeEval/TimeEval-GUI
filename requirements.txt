@@ -6,3 +6,4 @@ numpy
 pandas
 matplotlib
 requests
+protobuf>=3.20,<4
