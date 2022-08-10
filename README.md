@@ -84,10 +84,8 @@ For usage instructions of the respective Python APIs, please consider the projec
 If you use the TimeEval toolkit or any of its components in your project or research, please cite our demonstration paper:
 
 > Phillip Wenig, Sebastian Schmidl, and Thorsten Papenbrock.
-> TimeEval: A Benchmarking Toolkit for Time Series Anomaly Detection Algorithms. PVLDB, 15(12): XXXX - XXXX, 2022.
-> doi:[YYYY](https://doi.org/YYYY)
->
-> _To appear in [PVLDB 2022 volume 15 issue 12](https://vldb.org/2022/)_.
+> TimeEval: A Benchmarking Toolkit for Time Series Anomaly Detection Algorithms. PVLDB, 15(12): 3678 - 3681, 2022.
+> doi:[10.14778/3554821.3554873](https://doi.org/10.14778/3554821.3554873)
 
 If you use our evaluation results or our benchmark datasets and algorithms, please cite our evaluation paper:
 
@@ -105,8 +103,8 @@ You can use the following BibTeX entries:
   journaltitle = {Proceedings of the {{VLDB Endowment}} ({{PVLDB}})},
   volume = {15},
   number = {12},
-  pages = {XXXX--XXXX},
-  doi = {YYYY}
+  pages = {3678--3681},
+  doi = {10.14778/3554821.3554873}
 }
 @article{SchmidlEtAl2022Anomaly,
   title = {Anomaly Detection in Time Series: {{A}} Comprehensive Evaluation},
