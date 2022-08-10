@@ -4,5 +4,5 @@ install:
 run:
 	python -m timeeval_gui
 
-clear:
-	pip uninstall -r requirements.txt
+clean:
+	rm -r timeeval-files
