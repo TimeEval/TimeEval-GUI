@@ -1,5 +1,5 @@
 import warnings
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union, Optional
 
 import streamlit as st
 from gutenTAG import GutenTAG
@@ -33,8 +33,9 @@ def select_anomaly_type(key: str, bo_kind: str) -> Tuple[str, str]:
     return st.selectbox("Anomaly Type", anomaly_types.items(), format_func=lambda x: x[1], key=key)
 
 
-def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
-    base_oscillation = select_base_oscillation(f"base-oscillation-{c}")
+def base_oscillation_area(c, ts_config: Optional[TimeSeriesConfig], return_dict: bool = False) -> Union[TimeSeriesConfig, Dict]:
+    key = f"base-oscillation-{c}"
+    base_oscillation = select_base_oscillation(key)
     parameters = get_base_oscillation_parameters(base_oscillation[0])
     param_config = {}
     for p in parameters:
@@ -42,10 +43,20 @@ def channel_area(c, ts_config: TimeSeriesConfig) -> TimeSeriesConfig:
             param_config[p.key] = st.number_input(p.name, key=f"{p.key}-{c}", help=p.help)
         elif p.tpe == "integer":
             param_config[p.key] = int(st.number_input(p.name, key=f"{p.key}-{c}", help=p.help))
+        elif p.tpe == "object" and p.key == "trend":
+            if st.checkbox("add Trend", key=f"{key}-add-trend"):
+                st.markdown("---")
+                param_config[p.key] = base_oscillation_area(f"{key}-{p.name}", None, return_dict=True)
+                st.markdown("---")
         else:
             warn_msg = f"Input type ({p.tpe}) for parameter {p.name} of BO {base_oscillation[1]} not supported yet!"
             warnings.warn(warn_msg)
             st.warning(warn_msg)
+
+    if return_dict:
+        param_config["kind"] = base_oscillation[0]
+        return param_config
+
     ts_config.add_base_oscillation(base_oscillation[0], **param_config)
 
     return ts_config
@@ -107,7 +118,7 @@ class GutenTAGPage(Page):
         n_channels = st.number_input("Number of Channels", min_value=1)
         for c in range(n_channels):
             with st.expander(f"Channel {c}"):
-                timeseries_config = channel_area(c, timeseries_config)
+                timeseries_config = base_oscillation_area(c, timeseries_config)
 
         st.write("## Anomalies")
         n_anomalies = st.number_input("Number of Anomalies", min_value=0)
@@ -119,6 +130,7 @@ class GutenTAGPage(Page):
 
         gt = None
         if st.button("Build Timeseries"):
+            st.json(timeseries_config.config, expanded=False)
             if gt is None:
                 gt = GutenTAG.from_dict({"timeseries": [timeseries_config.config]}, plot=False)
                 gt.generate()
