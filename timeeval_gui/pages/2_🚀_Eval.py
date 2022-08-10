@@ -1,3 +1,9 @@
 from timeeval_gui._pages import EvalPage
 
-EvalPage().render()
+
+def main():
+    EvalPage().render()
+
+
+if __name__ == '__main__':
+    main()

@@ -131,7 +131,6 @@ class GutenTAGPage(Page):
 
         gt = None
         if st.button("Build Timeseries"):
-            st.json(timeseries_config.config, expanded=False)
             if gt is None:
                 gt = GutenTAG.from_dict({"timeseries": [timeseries_config.config]}, plot=False)
                 gt.generate()
