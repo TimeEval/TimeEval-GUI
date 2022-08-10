@@ -5,4 +5,4 @@ run:
 	python -m timeeval_gui
 
 clear:
-	sudo rm -r GutenTAG
+	pip uninstall -r requirements.txt
