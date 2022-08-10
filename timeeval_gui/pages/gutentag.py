@@ -3,6 +3,7 @@ from typing import Tuple, Dict, Union, Optional
 
 import streamlit as st
 from gutenTAG import GutenTAG
+from gutenTAG.generator.timeseries import TrainingType
 
 from timeeval_gui.timeseries_config import TimeSeriesConfig
 from timeeval_gui.utils import get_base_oscillations, get_anomaly_types, get_anomaly_params, \
@@ -135,8 +136,21 @@ class GutenTAGPage(Page):
                 gt = GutenTAG.from_dict({"timeseries": [timeseries_config.config]}, plot=False)
                 gt.generate()
 
-            gt.timeseries[0].plot()
-            st.pyplot()
+            ts = gt.timeseries[0]
+
+            test_data = ts.to_dataframe(training_type=TrainingType.TEST)
+            st.write("### Test Data")
+            st.line_chart(data=test_data)
+
+            if ts.semi_supervised:
+                semi_supervised_data = ts.to_dataframe(training_type=TrainingType.TRAIN_NO_ANOMALIES)
+                st.write("### Semi-Supervised Training Data (no anomalies)")
+                st.line_chart(data=semi_supervised_data.iloc[:, :-1])
+
+            if ts.supervised:
+                supervised_data = ts.to_dataframe(training_type=TrainingType.TRAIN_ANOMALIES)
+                st.write("### Supervised Training Data (with anomalies)")
+                st.line_chart(data=supervised_data)
 
         if st.button("Save"):
             if gt is None:
