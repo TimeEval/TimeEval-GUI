@@ -4,5 +4,5 @@ install:
 run:
 	python -m timeeval_gui
 
-clear:
-	sudo rm -r GutenTAG
+clean:
+	rm -r timeeval-files

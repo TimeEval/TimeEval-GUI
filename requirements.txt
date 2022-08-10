@@ -1,4 +1,4 @@
-streamlit==1.7.0
+streamlit==1.11.1
 timeeval==1.2.4
 timeeval-gutentag==0.2.0
 pyyaml
@@ -7,3 +7,4 @@ pandas
 matplotlib
 requests
 protobuf>=3.20,<4
+watchdog==2.1.9
