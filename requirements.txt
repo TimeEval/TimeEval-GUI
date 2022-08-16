@@ -8,3 +8,4 @@ matplotlib
 requests
 protobuf>=3.20,<4
 watchdog==2.1.9
+plotly==5.10.*

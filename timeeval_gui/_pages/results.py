@@ -1,13 +1,16 @@
+import os
 from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib.pyplot as plt
 from timeeval import DatasetManager, Datasets
+import plotly.graph_objects as go
 
 from .page import Page
+from ..config import TIMEEVAL_FILES_PATH
+from ..files import Files
 
 
 @st.cache(show_spinner=True, max_entries=1)
@@ -24,32 +27,29 @@ def create_dmgr(data_path: Path) -> Datasets:
     return DatasetManager(data_path, create_if_missing=False)
 
 
-# cache runs endlessly, but I don't know why. experimental_memo, however, works great!
-# @st.cache(show_spinner=True, max_entries=100, hash_funcs={pd.DataFrame: pd.util.hash_pandas_object, "builtins.function": lambda _: None})
-@st.experimental_memo(show_spinner=True, max_entries=100)
-def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", _fmt_label=lambda x: x) -> plt.Figure:
-    if n_show is not None:
-        n_show = n_show // 2
-        title = title + f" (worst {n_show} and best {n_show} algorithms)"
-        df_boxplot = pd.concat([df.iloc[:, :n_show], df.iloc[:, -n_show:]])
-    else:
-        title = title + f" (sorted by {ax_label})"
-        df_boxplot = pd.DataFrame(df)
-    labels = df_boxplot.columns
-    labels = [_fmt_label(c) for c in labels]
-    values = [df_boxplot[c].dropna().values for c in df_boxplot.columns]
-    fig = plt.figure()
-    ax = fig.gca()
-    ax.boxplot(values, sym="", vert=True, meanline=True, showmeans=True, showfliers=False,
-               manage_ticks=True)
-    ax.set_ylabel(ax_label)
-    ax.set_title(title)
-    ax.set_xticklabels(labels, rotation=-45, ha="left", rotation_mode="anchor")
-    # add vline to separate bad and good algos
-    ymin, ymax = ax.get_ylim()
-    if n_show is not None:
-        ax.vlines([n_show + 0.5], ymin, ymax, colors="black", linestyles="dashed")
-    fig.tight_layout()
+@st.cache(show_spinner=True, max_entries=100, hash_funcs={pd.DataFrame: pd.util.hash_pandas_object, "builtins.function": lambda _: None})
+def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", metric="ROC_AUC", _fmt_label=lambda x: x, log: bool = False) -> go.Figure:
+    df_asl = df.pivot(index="algorithm", columns="dataset_name", values=metric)
+    df_asl = df_asl.dropna(axis=0, how="all").dropna(axis=1, how="all")
+    df_asl["median"] = df_asl.median(axis=1)
+    df_asl = df_asl.sort_values(by="median", ascending=True)
+    df_asl = df_asl.drop(columns="median").T
+
+    fig = go.Figure()
+    for i, c in enumerate(df_asl.columns):
+        fig.add_trace(go.Box(
+            x=df_asl[c],
+            name=_fmt_label(c),
+            boxpoints=False,
+            visible="legendonly" if n_show is not None and n_show < i < len(df_asl.columns) - n_show else None
+        ))
+    fig.update_layout(
+        title={"text": title, "xanchor": "center", "x": 0.5},
+        xaxis_title=ax_label,
+        legend_title="Algorithms"
+    )
+    if log:
+        fig.update_xaxes(type="log")
     return fig
 
 
@@ -110,27 +110,30 @@ def plot_scores(algorithm_name, collection_name, dataset_name, df, dmgr, result_
             skip_algos.append(algo)
     algorithms = [a for a in algos if a not in skip_algos]
 
-    return plot_scores_plt(algorithms, auroc, df_scores, df_dataset, dataset_dim, dataset_name, **kwargs)
+    fig = plot_scores_plotly(algorithms, auroc, df_scores, df_dataset, dataset_dim, dataset_name)
+    st.plotly_chart(fig)
 
 
-def plot_scores_plt(algorithms, auroc, df_scores, df_dataset, dataset_dim, dataset_name, **kwargs):
-    import matplotlib.pyplot as plt
+def plot_scores_plotly(algorithms, auroc, df_scores, df_dataset, dataset_dim, dataset_name, **kwargs) -> go.Figure:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
 
     # Create plot
-    fig, axs = plt.subplots(2, 1, sharex=True, figsize=(20, 8))
+    fig = make_subplots(2, 1)
     if dataset_dim == "multivariate":
         for i in range(1, df_dataset.shape[1] - 1):
-            axs[0].plot(df_dataset.index, df_dataset.iloc[:, i], label=f"channel-{i}")
+            fig.add_trace(go.Scatter(x=df_dataset.index, y=df_dataset.iloc[:, i], name=f"channel-{i}"), 1, 1)
     else:
-        axs[0].plot(df_dataset.index, df_dataset.iloc[:, 1], label=f"timeseries")
-    axs[1].plot(df_dataset.index, df_dataset["is_anomaly"], label="label")
+        fig.add_trace(go.Scatter(x=df_dataset.index, y=df_dataset.iloc[:, 1], name="timeseries"), 1, 1)
+    fig.add_trace(go.Scatter(x=df_dataset.index, y=df_dataset["is_anomaly"], name="label"), 2, 1)
 
     for algo in algorithms:
-        axs[1].plot(df_scores.index, df_scores[algo], label=f"{algo}={auroc[algo]:.4f}")
-    axs[0].legend()
-    axs[1].legend()
-    fig.suptitle(f"Results of {','.join(np.unique(algorithms))} on {dataset_name}")
-    fig.tight_layout()
+        fig.add_trace(go.Scatter(x=df_scores.index, y=df_scores[algo], name=f"{algo}={auroc[algo]:.4f}"), 2, 1)
+    fig.update_xaxes(matches="x")
+    fig.update_layout(
+        title=f"Results of {','.join(np.unique(algorithms))} on {dataset_name}",
+        height=400
+    )
     return fig
 
 
@@ -177,8 +180,7 @@ class ResultsPage(Page):
             options = [None] + list(options)
             algorithm_name = st.selectbox("Algorithm", options, index=0)
         if algorithm_name is not None:
-            fig = plot_scores(algorithm_name, collection, dataset, res, dmgr, results_path)
-            st.pyplot(fig)
+            plot_scores(algorithm_name, collection, dataset, res, dmgr, results_path)
 
     def _df_overall_scores(self, res: pd.DataFrame) -> pd.DataFrame:
         aggregations = ["min", "mean", "median", "max"]
@@ -188,50 +190,55 @@ class ResultsPage(Page):
         return df_overall_scores
 
     def _quality_summary(self, res: pd.DataFrame):
-        df_asl = res.pivot(index="algorithm", columns="dataset_name", values="ROC_AUC")
-        df_asl = df_asl.dropna(axis=0, how="all").dropna(axis=1, how="all")
-        df_asl["mean"] = df_asl.agg("mean", axis=1)
-        df_asl = df_asl.sort_values(by="mean", ascending=True)
-        df_asl = df_asl.drop(columns="mean").T
-
         df_lut = self._df_overall_scores(res)
 
         st.header("Quality Summary")
-        if st.checkbox("Show only best and worse", key="nshow-check-quality", value=True):
-            n_show = st.number_input("Show worst and best n algorithms", key="nshow_roc", min_value=2, max_value=df_lut.shape[0], value=10)
+        if len(res.algorithm.unique()) > 2 and st.checkbox("Show only best and worse", key="nshow-check-quality", value=True):
+            n_show = st.number_input("Show worst and best n algorithms", key="nshow_roc", min_value=2, max_value=df_lut.shape[0], value=min(df_lut.shape[0], 10))
         else:
             n_show = None
         fmt_label = lambda c: f"{c} (ROC_AUC={df_lut.loc[c, 'mean']:.2f})"
 
-        fig = plot_boxplot(df_asl, n_show=n_show, title="AUC_ROC box plots", ax_label="AUC_ROC score", _fmt_label=fmt_label)
-        st.pyplot(fig)
+        fig = plot_boxplot(res, n_show=n_show, title="AUC_ROC box plots", ax_label="AUC_ROC score", metric="ROC_AUC", _fmt_label=fmt_label)
+        st.plotly_chart(fig)
 
     def _runtime_summary(self, res: pd.DataFrame):
-        df_arl = res.pivot(index="algorithm", columns="dataset_name", values="overall_time")
-        df_arl = df_arl.dropna(axis=0, how="all").dropna(axis=1, how="all")
-        df_arl["mean"] = df_arl.agg("mean", axis=1)
-        df_arl = df_arl.sort_values(by="mean", ascending=True)
-        df_arl = df_arl.drop(columns="mean").T
-
         df_lut = self._df_overall_scores(res)
 
         st.header("Runtime Summary")
-        if st.checkbox("Show only best and worse", key="nshow-check-rt", value=True):
-            n_show = st.number_input("Show worst and best n algorithms", key="nshow_rt", min_value=2, max_value=df_lut.shape[0], value=10)
+        if len(res.algorithm.unique()) > 2 and st.checkbox("Show only best and worse", key="nshow-check-rt", value=True):
+            n_show = st.number_input("Show worst and best n algorithms", key="nshow_rt", min_value=2, max_value=df_lut.shape[0], value=min(df_lut.shape[0], 10))
         else:
             n_show = None
         fmt_label = lambda c: f"{c} (ROC_AUC={df_lut.loc[c, 'mean']:.2f})" if c in df_lut.index else c
 
-        fig = plot_boxplot(df_arl, n_show=n_show, title="Overall runtime box plots", ax_label="Overall runtime (in seconds)", _fmt_label=fmt_label)
-        st.pyplot(fig)
+        fig = plot_boxplot(res, n_show=n_show, title="Overall runtime box plots", ax_label="Overall runtime (in seconds)", metric="overall_time", _fmt_label=fmt_label, log=True)
+        st.plotly_chart(fig)
 
     def render(self):
         st.title(self.name)
+        files = Files()
 
-        results_path = st.text_input("Choose experiment run results folder", placeholder="/home/user/results")
-        data_path = st.text_input("Choose location of datasets folder", placeholder="/home/user/data")
-        if results_path != "" and data_path != "":
-            results_path = Path(results_path)
+        col1, col2 = st.columns(2)
+
+        with col1:
+            results_dir = st.text_input(
+                "Choose experiment run results parent folder",
+                placeholder="/home/user/results",
+                value=files.results_folder()
+            )
+
+        with col2:
+            experiments = [exp for exp in os.listdir(results_dir) if os.path.isdir(Path(results_dir) / exp) and ("results.csv" in os.listdir(Path(results_dir) / exp))]
+            results_path = st.selectbox("Choose experiment run results folder", experiments)
+
+        data_path = st.text_input(
+            "Choose location of datasets folder",
+            placeholder="/home/user/data",
+            value=files.timeseries_folder()
+        )
+        if results_dir != "" and results_path != "" and data_path != "" and len(experiments) > 0:
+            results_path = Path(results_dir) / results_path
             data_path = Path(data_path)
             res = load_results(results_path)
             dmgr = create_dmgr(data_path)
