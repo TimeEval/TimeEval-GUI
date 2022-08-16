@@ -67,6 +67,9 @@ class Files:
     def results_folder(self) -> Path:
         return self._results_path
 
+    def timeseries_folder(self) -> Path:
+        return self._ts_path
+
     def _load_anomaly_kind_configuration_schema(self) -> None:
         result = requests.get(GUTENTAG_CONFIG_SCHEMA_ANOMALY_KIND_URL)
         with self._anomaly_kind_schema_path.open("w") as fh:
