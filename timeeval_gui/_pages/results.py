@@ -18,6 +18,7 @@ def load_results(results_path: Path) -> pd.DataFrame:
     res = pd.read_csv(results_path / "results.csv")
     res["dataset_name"] = res["dataset"].str.split(".").str[0]
     res["overall_time"] = res["execute_main_time"].fillna(0) + res["train_main_time"].fillna(0)
+    res["algorithm-index"] = res.algorithm + "-" + res.index.astype(str)
     res = res.drop_duplicates()
     return res
 
@@ -29,7 +30,7 @@ def create_dmgr(data_path: Path) -> Datasets:
 
 @st.cache(show_spinner=True, max_entries=100, hash_funcs={pd.DataFrame: pd.util.hash_pandas_object, "builtins.function": lambda _: None})
 def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", metric="ROC_AUC", _fmt_label=lambda x: x, log: bool = False) -> go.Figure:
-    df_asl = df.pivot(index="algorithm", columns="dataset_name", values=metric)
+    df_asl = df.pivot(index="algorithm-index", columns="dataset_name", values=metric)
     df_asl = df_asl.dropna(axis=0, how="all").dropna(axis=1, how="all")
     df_asl["median"] = df_asl.median(axis=1)
     df_asl = df_asl.sort_values(by="median", ascending=True)
@@ -184,7 +185,7 @@ class ResultsPage(Page):
 
     def _df_overall_scores(self, res: pd.DataFrame) -> pd.DataFrame:
         aggregations = ["min", "mean", "median", "max"]
-        df_overall_scores = res.pivot_table(index="algorithm", values="ROC_AUC", aggfunc=aggregations)
+        df_overall_scores = res.pivot_table(index="algorithm-index", values="ROC_AUC", aggfunc=aggregations)
         df_overall_scores.columns = aggregations
         df_overall_scores = df_overall_scores.sort_values(by="mean", ascending=False)
         return df_overall_scores
