@@ -17,7 +17,7 @@ def main():
     """)
 
     st.info("For more detailed documentation on the tools: "
-            "[GutenTAG Documentation](https://github.com/HPI-Information-Systems/gutentag/blob/main/doc/index.md) and "
+            "[GutenTAG Documentation](https://github.com/TimeEval/gutentag/blob/main/doc/index.md) and "
             "[Eval Documentation](https://timeeval.readthedocs.io/en/latest/)")
 
 

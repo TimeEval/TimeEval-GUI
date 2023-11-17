@@ -28,13 +28,13 @@ It consists of four main components: a visual frontend for interactive experimen
 While the frontend is hosted in this repository, GutenTAG and Eval are hosted in separate repositories.
 Those repositories also include their respective Python APIs:
 
-[![GutenTAG Badge](https://img.shields.io/badge/Repository-GutenTAG-blue?style=for-the-badge)](https://github.com/HPI-Information-Systems/gutentag)
-[![Eval Badge](https://img.shields.io/badge/Repository-Eval-blue?style=for-the-badge)](https://github.com/HPI-Information-Systems/timeeval)
+[![GutenTAG Badge](https://img.shields.io/badge/Repository-GutenTAG-blue?style=for-the-badge)](https://github.com/TimeEval/gutentag)
+[![Eval Badge](https://img.shields.io/badge/Repository-Eval-blue?style=for-the-badge)](https://github.com/TimeEval/timeeval)
 
 As initial resources for evaluations, we provide over 1,000 benchmark datasets and an increasing number of time series anomaly detection algorithms (over 70): 
 
-[![Datasets Badge](https://img.shields.io/badge/Repository-Datasets-3a4750?style=for-the-badge)](https://hpi-information-systems.github.io/timeeval-evaluation-paper/notebooks/Datasets.html)
-[![Algorithms Badge](https://img.shields.io/badge/Repository-Algorithms-3a4750?style=for-the-badge)](https://github.com/HPI-Information-Systems/TimeEval-algorithms)
+[![Datasets Badge](https://img.shields.io/badge/Repository-Datasets-3a4750?style=for-the-badge)](https://timeeval.github.io/evaluation-paper/notebooks/Datasets.html)
+[![Algorithms Badge](https://img.shields.io/badge/Repository-Algorithms-3a4750?style=for-the-badge)](https://github.com/TimeEval/TimeEval-algorithms)
 
 ## Installation and Usage (tl;dr)
 
@@ -76,8 +76,8 @@ pip install timeeval-gutentag
 
 For usage instructions of the respective Python APIs, please consider the project's documentation:
 
-[![GutenTAG Badge](https://img.shields.io/badge/Repository-GutenTAG-blue?style=for-the-badge)](https://github.com/HPI-Information-Systems/gutentag)
-[![Eval Badge](https://img.shields.io/badge/Repository-Eval-blue?style=for-the-badge)](https://github.com/HPI-Information-Systems/timeeval)
+[![GutenTAG Badge](https://img.shields.io/badge/Repository-GutenTAG-blue?style=for-the-badge)](https://github.com/TimeEval/gutentag)
+[![Eval Badge](https://img.shields.io/badge/Repository-Eval-blue?style=for-the-badge)](https://github.com/TimeEval/timeeval)
 
 ## Citation
 
