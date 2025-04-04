@@ -9,3 +9,5 @@ requests
 protobuf>=3.20,<4
 watchdog==2.1.9
 plotly==5.10.*
+altair==4.2.2  # newer versions of altair are not compatible with streamlit 1.11.1
+requests==2.31.0  # newer versions break the docker connection with "Error while fetching server API version: Not supported URL scheme http+docker"
