@@ -1,18 +1,16 @@
 import logging
 import sys
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Union
 
 import docker
-import numpy as np
 import psutil
 import streamlit as st
 from docker.errors import DockerException
 from durations import Duration
-from streamlit.state import NoValue
-from timeeval import Algorithm, ResourceConstraints, Metric, TimeEval
+from timeeval import Algorithm, ResourceConstraints, DefaultMetrics, TimeEval
 from timeeval.params import FixedParameters, FullParameterGrid, IndependentParameterGrid
 from timeeval.resource_constraints import GB
-from timeeval_experiments import algorithms as timeeval_algorithms
+from timeeval import algorithms as timeeval_algorithms
 
 import timeeval_gui.st_redirect as rd
 from .param_opt import InputParam
@@ -21,7 +19,7 @@ from ...config import SKIP_DOCKER_PULL
 from ...files import Files
 
 # keep this import!
-from timeeval_experiments.algorithms import *
+from timeeval.algorithms import *
 
 
 def create_algorithm_list() -> List[Algorithm]:
@@ -40,7 +38,7 @@ def create_algorithm_list() -> List[Algorithm]:
 
         algorithms = [a for a in algorithms if image_exists(a.main.image_name, a.main.tag)]
         del docker_client
-        return algorithms
+    return algorithms
 
 
 algos: List[Algorithm] = create_algorithm_list()
@@ -145,10 +143,12 @@ class EvalPage(Page):
         st.write("## General Settings")
 
         repetitions = st.slider("Repetitions", value=1, min_value=1, max_value=1000, step=1)
-        metrics = st.multiselect("Metrics",
-                                 options=[m for m in Metric if m not in {Metric.RANGE_F1, Metric.RANGE_RECALL, Metric.RANGE_PRECISION}],
-                                 default=Metric.default_list(),
-                                 format_func=lambda m: m.name)
+        metric_options = [
+            "ROC_AUC", "PR_AUC", "RANGE_PR_AUC", "AVERAGE_PRECISION", "RANGE_PRECISION",
+            "RANGE_RECALL", "RANGE_F1", "FIXED_RANGE_PR_AUC",
+        ]
+        metric_names = st.multiselect("Metrics", options=metric_options, default="ROC_AUC")
+        metrics = [getattr(DefaultMetrics, m) for m in metric_names]
         force_training_type_match = st.checkbox("Force training type match between algorithm and dataset", value=False)
         force_dimensionality_match = st.checkbox(
             "Force dimensionality match between algorithm and dataset (uni- or multivariate)",
