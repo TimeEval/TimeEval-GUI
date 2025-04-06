@@ -9,14 +9,13 @@ from timeeval import DatasetManager, Datasets
 import plotly.graph_objects as go
 
 from .page import Page
-from ..config import TIMEEVAL_FILES_PATH
 from ..files import Files
 
 
 @st.cache(show_spinner=True, max_entries=1)
 def load_results(results_path: Path) -> pd.DataFrame:
     res = pd.read_csv(results_path / "results.csv")
-    res["dataset_name"] = res["dataset"].str.split(".").str[0]
+    res["dataset_name"] = res["dataset"]
     res["overall_time"] = res["execute_main_time"].fillna(0) + res["train_main_time"].fillna(0)
     res["algorithm-index"] = res.algorithm + "-" + res.index.astype(str)
     res = res.drop_duplicates()
@@ -30,7 +29,9 @@ def create_dmgr(data_path: Path) -> Datasets:
 
 @st.cache(show_spinner=True, max_entries=100, hash_funcs={pd.DataFrame: pd.util.hash_pandas_object, "builtins.function": lambda _: None})
 def plot_boxplot(df, n_show: Optional[int] = None, title="Box plots", ax_label="values", metric="ROC_AUC", _fmt_label=lambda x: x, log: bool = False) -> go.Figure:
-    df_asl = df.pivot(index="algorithm-index", columns="dataset_name", values=metric)
+    df_asl = df.copy()
+    df_asl["dataset_name"] = df_asl["dataset_name"].str.split(".").str[0]
+    df_asl = df_asl.pivot(index="algorithm-index", columns="dataset_name", values=metric)
     df_asl = df_asl.dropna(axis=0, how="all").dropna(axis=1, how="all")
     df_asl["median"] = df_asl.median(axis=1)
     df_asl = df_asl.sort_values(by="median", ascending=True)
@@ -102,7 +103,6 @@ def plot_scores(algorithm_name, collection_name, dataset_name, df, dmgr, result_
             continue
 
         # load scores
-        training_type = df.loc[df["algorithm"] == algo, "algo_training_type"].values[0].lower().replace("_", "-")
         try:
             df_scores[algo] = load_scores_df(algo, dataset_id, df, result_path).iloc[:, 0]
         except (ValueError, FileNotFoundError):
@@ -111,7 +111,7 @@ def plot_scores(algorithm_name, collection_name, dataset_name, df, dmgr, result_
             skip_algos.append(algo)
     algorithms = [a for a in algos if a not in skip_algos]
 
-    fig = plot_scores_plotly(algorithms, auroc, df_scores, df_dataset, dataset_dim, dataset_name)
+    fig = plot_scores_plotly(algorithms, auroc, df_scores, df_dataset, dataset_dim, dataset_name.split(".")[0])
     st.plotly_chart(fig)
 
 
@@ -175,7 +175,7 @@ class ResultsPage(Page):
         with col1:
             collection = st.selectbox("Collection", options=res["collection"].unique())
         with col2:
-            dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique())
+            dataset = st.selectbox("Dataset", res[res.collection == collection]["dataset_name"].unique(), format_func=lambda x: x.split(".")[0])
         with col3:
             options = res[(res.collection == collection) & (res.dataset_name == dataset) & (res.status.isin(["Status.OK", "OK"]))]["algorithm"].unique()
             options = [None] + list(options)

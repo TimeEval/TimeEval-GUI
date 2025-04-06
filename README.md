@@ -31,7 +31,7 @@ Those repositories also include their respective Python APIs:
 [![GutenTAG Badge](https://img.shields.io/badge/Repository-GutenTAG-blue?style=for-the-badge)](https://github.com/TimeEval/gutentag)
 [![Eval Badge](https://img.shields.io/badge/Repository-Eval-blue?style=for-the-badge)](https://github.com/TimeEval/timeeval)
 
-As initial resources for evaluations, we provide over 1,000 benchmark datasets and an increasing number of time series anomaly detection algorithms (over 70): 
+As initial resources for evaluations, we provide over 1,000 benchmark datasets and an increasing number of time series anomaly detection algorithms (over 70):
 
 [![Datasets Badge](https://img.shields.io/badge/Repository-Datasets-3a4750?style=for-the-badge)](https://timeeval.github.io/evaluation-paper/notebooks/Datasets.html)
 [![Algorithms Badge](https://img.shields.io/badge/Repository-Algorithms-3a4750?style=for-the-badge)](https://github.com/TimeEval/TimeEval-algorithms)
@@ -39,12 +39,21 @@ As initial resources for evaluations, we provide over 1,000 benchmark datasets a
 ## Installation and Usage (tl;dr)
 
 TimeEval is tested on Linux and Mac operating systems and supports Python 3.7 until 3.9.
-
 We don't support Python 3.10 or higher at the moment because downstream libraries are incompatible.
 
 > We haven't tested if TimeEval runs on Windows.
 > If you use Windows, please help us and test if TimeEval runs correctly.
 > If there are any issues, don't hesitate to contact us.
+
+By default, TimeEval does not automatically download all available algorithms (Docker images), because there are just too many.
+However, you can download them easily [from our registry](https://github.com/orgs/TimeEval/packages?repo_name=TimeEval-algorithms) using docker.
+Please download the correct tag for the algorithm, compatible with your version of TimeEval:
+
+```bash
+docker pull ghcr.io/timeeval/kmeans:0.3.0
+```
+
+After you have downloaded the algorithm images, you need to restart the GUI, so that it can find the new images.
 
 ### Web frontend
 
