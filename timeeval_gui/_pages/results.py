@@ -123,13 +123,13 @@ def plot_scores_plotly(algorithms, auroc, df_scores, df_dataset, dataset_dim, da
     fig = make_subplots(2, 1)
     if dataset_dim == "multivariate":
         for i in range(1, df_dataset.shape[1] - 1):
-            fig.add_trace(go.Scatter(x=df_dataset.index, y=df_dataset.iloc[:, i], name=f"channel-{i}"), 1, 1)
+            fig.add_trace(go.Scatter(x=df_dataset["timestamp"], y=df_dataset.iloc[:, i], name=df_dataset.columns[i]), 1, 1)
     else:
-        fig.add_trace(go.Scatter(x=df_dataset.index, y=df_dataset.iloc[:, 1], name="timeseries"), 1, 1)
-    fig.add_trace(go.Scatter(x=df_dataset.index, y=df_dataset["is_anomaly"], name="label"), 2, 1)
+        fig.add_trace(go.Scatter(x=df_dataset["timestamp"], y=df_dataset.iloc[:, 1], name="timeseries"), 1, 1)
+    fig.add_trace(go.Scatter(x=df_dataset["timestamp"], y=df_dataset["is_anomaly"], name="label"), 2, 1)
 
     for algo in algorithms:
-        fig.add_trace(go.Scatter(x=df_scores.index, y=df_scores[algo], name=f"{algo}={auroc[algo]:.4f}"), 2, 1)
+        fig.add_trace(go.Scatter(x=df_dataset["timestamp"], y=df_scores[algo], name=f"{algo}={auroc[algo]:.4f}"), 2, 1)
     fig.update_xaxes(matches="x")
     fig.update_layout(
         title=f"Results of {','.join(np.unique(algorithms))} on {dataset_name}",
